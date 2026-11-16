@@ -1,0 +1,11 @@
+astropy
+fastapi
+uvicorn
+pydantic
+astroquery
+pyvo
+requests
+pandas
+numpy
+pyyaml
+reproject

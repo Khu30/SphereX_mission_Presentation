@@ -1,0 +1,26 @@
+{
+  "status": "success",
+
+  "target": {
+    "ra": 134.5,
+    "dec": -7.2
+  },
+
+  "available_releases": [
+    "DR1",
+    "QR3"
+  ],
+
+  "detectors": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6"
+  ],
+
+  "total_observations": 12,
+
+  "processing_status": "metadata_retrieved"
+}

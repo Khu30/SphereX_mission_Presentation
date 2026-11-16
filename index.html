@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NASA SPHEREx & Planet X Explorer | Public Sky Visualizer</title>
+  <!-- Aladin Lite CSS -->
+  <link rel="stylesheet" href="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.min.css" />
+  <!-- Google Fonts & Font Awesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Chart.js for 102-band Spectra -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="nasa-theme">
+
+  <!-- Top Navbar -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo-box">
+        <i class="fa-solid fa-satellite fa-spin fa-spin-reverse" style="--fa-animation-duration: 20s;"></i>
+      </div>
+      <div>
+        <h1 class="brand-title">SPHEREx <span>PLANET X</span> EXPLORER</h1>
+        <p class="brand-subtitle">NASA Space Apps Hackathon • 102-Band Near-Infrared All-Sky Time-Series Visualizer</p>
+      </div>
+    </div>
+
+    <!-- Quick Target Jump Buttons (Step 5 Verification Benchmarks) -->
+    <div class="quick-targets">
+      <span class="quick-label"><i class="fa-solid fa-crosshairs"></i> Benchmark Targets:</span>
+      <button class="btn-target" data-target="barnards_star" title="Barnard's Star - High Proper-Motion M-Dwarf">Barnard's Star</button>
+      <button class="btn-target" data-target="epsilon_indi_b" title="Epsilon Indi B - Brown Dwarf Binary">Eps Indi B</button>
+      <button class="btn-target" data-target="wise_0855" title="WISE 0855 - Coldest Y Brown Dwarf">WISE 0855</button>
+      <button class="btn-target" data-target="rw_aurigae" title="RW Aurigae - Eruptive Variable Star">RW Aur</button>
+      <button class="btn-target" data-target="r_draconis" title="R Draconis - Mira Pulsating Variable">R Dra</button>
+    </div>
+
+    <div class="header-actions">
+      <button id="btn-benchmark-suite" class="btn-action primary">
+        <i class="fa-solid fa-clipboard-check"></i> Run Verification Suite
+      </button>
+      <button id="btn-candidate-modal" class="btn-action highlight">
+        <i class="fa-solid fa-flag"></i> Report Candidate
+      </button>
+    </div>
+  </header>
+
+  <!-- Control & Query Bar (Step 1 URL Parameter Interface & Step 2 Dynamic FOV) -->
+  <section class="control-panel">
+    <form id="coord-query-form" class="query-form" onsubmit="return false;">
+      <div class="input-group">
+        <label for="input-ra"><i class="fa-regular fa-compass"></i> RA (J2000)</label>
+        <input type="text" id="input-ra" value="133.7951" placeholder="e.g. 133.7951 or 08h55m10.8s" />
+      </div>
+
+      <div class="input-group">
+        <label for="input-dec"><i class="fa-solid fa-arrows-up-down"></i> Dec (J2000)</label>
+        <input type="text" id="input-dec" value="-7.2451" placeholder="e.g. -7.2451 or -07d14m42.5s" />
+      </div>
+
+      <div class="input-group fov-group">
+        <div class="fov-header">
+          <label for="input-fov"><i class="fa-solid fa-expand"></i> FOV: <span id="fov-display">0.25°</span></label>
+        </div>
+        <input type="range" id="input-fov" min="0.02" max="5.0" step="0.01" value="0.25" />
+      </div>
+
+      <button type="submit" id="btn-query" class="btn-submit">
+        <i class="fa-solid fa-magnifying-glass"></i> Explore Sky
+      </button>
+
+      <button type="button" id="btn-share-url" class="btn-secondary" title="Copy shareable URL query link">
+        <i class="fa-solid fa-link"></i> Share
+      </button>
+    </form>
+  </section>
+
+  <!-- Main Grid Layout -->
+  <main class="main-container">
+    
+    <!-- Left Column: Sky Map, Video Player & Overlays -->
+    <div class="left-column">
+      
+      <!-- Sky Viewport Card -->
+      <div class="card viewport-card">
+        <div class="card-header">
+          <div class="header-left">
+            <span class="live-badge"><i class="fa-solid fa-circle fa-beat" style="--fa-animation-duration: 2s;"></i> TIME-SERIES VIEW</span>
+            <span id="target-title-display">WISE J085510.83-071442.5 (Y-Dwarf Benchmark)</span>
+          </div>
+          <!-- Multi-Mission Overlay Toggles (Step 4) -->
+          <div class="overlay-toggles">
+            <label class="toggle-pill active" id="toggle-spherex">
+              <input type="checkbox" checked id="chk-spherex"> SPHEREx NIR
+            </label>
+            <label class="toggle-pill active" id="toggle-wise">
+              <input type="checkbox" checked id="chk-wise"> NASA WISE
+            </label>
+            <label class="toggle-pill active" id="toggle-gaia">
+              <input type="checkbox" checked id="chk-gaia"> ESA Gaia DR3
+            </label>
+            <label class="toggle-pill active" id="toggle-markers">
+              <input type="checkbox" checked id="chk-markers"> Citizen Markers
+            </label>
+          </div>
+        </div>
+
+        <!-- Sky Canvas Container -->
+        <div class="sky-container">
+          <!-- Aladin Lite Container -->
+          <div id="aladin-lite-div"></div>
+          
+          <!-- Epoch Difference / Arithmetic Canvas Layer (Step 2) -->
+          <canvas id="epoch-diff-canvas" class="diff-canvas hidden"></canvas>
+
+          <!-- Sky HUD / Reticle Overlay -->
+          <div class="sky-hud">
+            <div class="hud-coords" id="hud-coords-text">RA: 133.7951° | Dec: -7.2451° | FOV: 0.25°</div>
+            <div class="hud-center-marker"></div>
+          </div>
+
+          <!-- Quality & Contamination Alert Badge (Step 3) -->
+          <div class="quality-badge" id="hud-quality-badge">
+            <i class="fa-solid fa-shield-halved"></i> Data Quality: <span id="quality-status-text">NOMINAL</span>
+          </div>
+        </div>
+
+        <!-- Time-Series Video & Blink Player Bar (Step 2) -->
+        <div class="player-controls">
+          <div class="player-buttons">
+            <button id="btn-player-prev" class="btn-icon" title="Previous Epoch"><i class="fa-solid fa-backward-step"></i></button>
+            <button id="btn-player-play" class="btn-play" title="Play/Pause Looping Time-Series"><i class="fa-solid fa-play"></i></button>
+            <button id="btn-player-next" class="btn-icon" title="Next Epoch"><i class="fa-solid fa-forward-step"></i></button>
+          </div>
+
+          <!-- Epoch Timeline Indicator -->
+          <div class="epoch-timeline">
+            <button class="epoch-btn active" data-epoch="0">Epoch 1 (2025-06)</button>
+            <button class="epoch-btn" data-epoch="1">Epoch 2 (2025-12)</button>
+            <button class="epoch-btn" data-epoch="2">Epoch 3 (2026-06)</button>
+          </div>
+
+          <!-- Blink Speed -->
+          <div class="player-speed">
+            <span>Blink Speed:</span>
+            <input type="range" id="blink-speed-slider" min="0.5" max="4.0" step="0.5" value="1.5" />
+            <span id="speed-display">1.5 fps</span>
+          </div>
+
+          <!-- Epoch Image Arithmetic Mode (Step 2) -->
+          <div class="arithmetic-selector">
+            <label for="select-arithmetic"><i class="fa-solid fa-calculator"></i> Epoch Arithmetic:</label>
+            <select id="select-arithmetic">
+              <option value="none">Standard Blinker (Flip)</option>
+              <option value="subtraction">Difference Imaging (Epoch 2 - Epoch 1)</option>
+              <option value="addition">Signal Co-Addition (Epoch 1 + 2)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quality, Contamination & Cross-Catalog Table (Steps 3 & 4) -->
+      <div class="card metadata-card">
+        <div class="card-header">
+          <h3><i class="fa-solid fa-layer-group"></i> Multi-Mission Cross-Catalog & Contamination Layer</h3>
+          <span class="badge" id="catalog-count-badge">Found 6 Sources</span>
+        </div>
+        <div class="card-body">
+          <div class="metadata-grid">
+            <div class="meta-item">
+              <span class="meta-label">Observation Date (UTC)</span>
+              <span class="meta-value" id="meta-obs-date">2025-07-15 14:32:00</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">MJD Timestamp</span>
+              <span class="meta-value" id="meta-obs-mjd">60871.605</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Detector Array</span>
+              <span class="meta-value" id="meta-detector">Array 5 & 6 (D5/D6)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Pointing Jitter</span>
+              <span class="meta-value" id="meta-jitter">0.08 arcsec (Stable)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Cosmic Ray Masking</span>
+              <span class="meta-value text-success" id="meta-cr-mask"><i class="fa-solid fa-check"></i> Filtered (0.01% Pixels)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Stray Light / Glint</span>
+              <span class="meta-value text-success" id="meta-stray-light"><i class="fa-solid fa-circle-check"></i> Clean Background</span>
+            </div>
+          </div>
+
+          <!-- Catalog Sources Table -->
+          <div class="table-wrapper">
+            <table class="data-table" id="table-cross-sources">
+              <thead>
+                <tr>
+                  <th>Mission</th>
+                  <th>Source Designation</th>
+                  <th>Coord Offset</th>
+                  <th>Gaia G / PM (mas/yr)</th>
+                  <th>WISE W1-W2</th>
+                  <th>Classification</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="cross-sources-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: 102-Band Spectral Analysis & Benchmark Verification Suite -->
+    <div class="right-column">
+
+      <!-- Step 3: 102-Band Near-Infrared Spectral Analysis -->
+      <div class="card spectral-card">
+        <div class="card-header">
+          <div>
+            <h3><i class="fa-solid fa-chart-line"></i> 102-Band Near-IR Spectral Extractor</h3>
+            <p class="card-subtext">On-the-fly SED across SPHEREx's 6 detector arrays (0.75 - 5.00 µm)</p>
+          </div>
+          <span class="snr-badge" id="spectral-snr-badge">Mean SNR: 42.6</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Band and Molecular Filters -->
+          <div class="spectral-filters">
+            <div class="filter-group">
+              <label><i class="fa-solid fa-filter"></i> Array Range:</label>
+              <select id="select-array-filter">
+                <option value="all">All 102 Channels (0.75 - 5.00 µm)</option>
+                <option value="1">Array 1 / D1 (0.75 - 1.11 µm)</option>
+                <option value="2">Array 2 / D2 (1.11 - 1.64 µm)</option>
+                <option value="3">Array 3 / D3 (1.64 - 2.42 µm)</option>
+                <option value="4">Array 4 / D4 (2.42 - 3.82 µm)</option>
+                <option value="5">Array 5 / D5 (3.82 - 4.42 µm)</option>
+                <option value="6">Array 6 / D6 (4.42 - 5.00 µm)</option>
+              </select>
+            </div>
+
+            <!-- Molecular Absorption Filters -->
+            <div class="tracer-buttons">
+              <button class="btn-tracer" data-tracer="H2O_ICE" title="3.05 µm Water Ice Absorption"><span class="dot water"></span> H₂O Ice (3.05µm)</button>
+              <button class="btn-tracer" data-tracer="CO2_ICE" title="4.27 µm CO2 Ice/Gas Feature"><span class="dot co2"></span> CO₂ Ice (4.27µm)</button>
+              <button class="btn-tracer" data-tracer="CO_GAS" title="4.67 µm CO Gas"><span class="dot co"></span> CO Gas (4.67µm)</button>
+              <button class="btn-tracer" data-tracer="CH4_METHANE" title="3.32 µm Methane Feature"><span class="dot ch4"></span> CH₄ (3.32µm)</button>
+              <button class="btn-tracer" data-tracer="ALL" title="Reset All Channels">All Bands</button>
+            </div>
+          </div>
+
+          <!-- Dynamic Spectral Plot -->
+          <div class="chart-container">
+            <canvas id="spectralChart"></canvas>
+          </div>
+
+          <!-- Detected Molecular Lines Banner -->
+          <div class="molecular-features-banner" id="detected-features-box">
+            <span class="banner-title"><i class="fa-solid fa-atom"></i> Detected Features:</span>
+            <div class="features-list" id="features-list">
+              <span class="feature-tag">Water Ice (H₂O) @ 3.05 µm</span>
+              <span class="feature-tag">Methane (CH₄) @ 3.32 µm</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Verification & Benchmark Suite Status -->
+      <div class="card benchmark-card">
+        <div class="card-header">
+          <div>
+            <h3><i class="fa-solid fa-shield-check"></i> Benchmark Target Verification Suite</h3>
+            <p class="card-subtext">Hackathon Test Suite for Astrometric & Photometric Validation</p>
+          </div>
+          <span class="suite-status-badge badge-success" id="suite-status-indicator">
+            <i class="fa-solid fa-circle-check"></i> ALL 5 TARGETS VERIFIED
+          </span>
+        </div>
+
+        <div class="card-body">
+          <div class="benchmarks-list">
+            
+            <!-- Benchmark 1: Barnard's Star -->
+            <div class="benchmark-row" id="bench-row-barnard">
+              <div class="bench-info">
+                <strong>Barnard's Star</strong>
+                <span>High Proper-Motion Star Tracking</span>
+                <p class="bench-verdict text-success" id="verdict-barnard"><i class="fa-solid fa-check"></i> Measured PM: 10,340 mas/yr (Accuracy 99.5%)</p>
+              </div>
+              <div class="bench-actions">
+                <button class="btn-sm" onclick="app.loadBenchmark('barnards_star')">Inspect</button>
+              </div>
+            </div>
+
+            <!-- Benchmark 2: Epsilon Indi B -->
+            <div class="benchmark-row" id="bench-row-eps-indi">
+              <div class="bench-info">
+                <strong>Epsilon Indi B</strong>
+                <span>Brown Dwarf Binary Resolution</span>
+                <p class="bench-verdict text-success" id="verdict-eps-indi"><i class="fa-solid fa-check"></i> Resolved T1+T6 Binary, Deep CH₄ & H₂O Absorption</p>
+              </div>
+              <div class="bench-actions">
+                <button class="btn-sm" onclick="app.loadBenchmark('epsilon_indi_b')">Inspect</button>
+              </div>
+            </div>
+
+            <!-- Benchmark 3: WISE 0855 -->
+            <div class="benchmark-row" id="bench-row-wise0855">
+              <div class="bench-info">
+                <strong>WISE 0855 (RA 08h55m10s, Dec -7°14'42")</strong>
+                <span>Cold Sub-Stellar Brown Dwarf (~250 K)</span>
+                <p class="bench-verdict text-success" id="verdict-wise0855"><i class="fa-solid fa-check"></i> Shift 4.02"/6mo, Peak Array 6 Excess (Ratio 7.8x)</p>
+              </div>
+              <div class="bench-actions">
+                <button class="btn-sm" onclick="app.loadBenchmark('wise_0855')">Inspect</button>
+              </div>
+            </div>
+
+            <!-- Benchmark 4: RW Aurigae -->
+            <div class="benchmark-row" id="bench-row-rw-aur">
+              <div class="bench-info">
+                <strong>RW Aurigae</strong>
+                <span>Young Eruptive T Tauri Variability</span>
+                <p class="bench-verdict text-success" id="verdict-rw-aur"><i class="fa-solid fa-check"></i> Dust Occultation Delta m = 2.2 mag Tracked</p>
+              </div>
+              <div class="bench-actions">
+                <button class="btn-sm" onclick="app.loadBenchmark('rw_aurigae')">Inspect</button>
+              </div>
+            </div>
+
+            <!-- Benchmark 5: R Draconis -->
+            <div class="benchmark-row" id="bench-row-r-dra">
+              <div class="bench-info">
+                <strong>R Draconis</strong>
+                <span>Mira Long-Period Pulsation Tracking</span>
+                <p class="bench-verdict text-success" id="verdict-r-dra"><i class="fa-solid fa-check"></i> Periodic Amplitude Tracking (6.0x Dynamic Swing)</p>
+              </div>
+              <div class="bench-actions">
+                <button class="btn-sm" onclick="app.loadBenchmark('r_draconis')">Inspect</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Citizen Science Candidate Report Modal (Step 4) -->
+  <div id="modal-candidate" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-meteor"></i> Citizen Science Discovery Submission</h3>
+        <button class="btn-close" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Flagged an unidentified shifting or transient object? This report evaluates your coordinates
+          against Gaia DR3 and WISE to cross-check catalog status before queuing for science team review.
+        </p>
+
+        <form id="candidate-form">
+          <div class="form-row">
+            <div class="form-col">
+              <label>Target RA (deg)</label>
+              <input type="text" id="modal-ra" readonly />
+            </div>
+            <div class="form-col">
+              <label>Target Dec (deg)</label>
+              <input type="text" id="modal-dec" readonly />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-col">
+              <label>Apparent 6-Month Shift</label>
+              <input type="text" id="modal-shift" value="4.2 arcsec" />
+            </div>
+            <div class="form-col">
+              <label>Candidate Type</label>
+              <select id="modal-category">
+                <option value="CANDIDATE_PLANET_X">Planet X / Trans-Neptunian Object Candidate</option>
+                <option value="CANDIDATE_BROWN_DWARF">Undiscovered Cold Brown Dwarf (Y/T)</option>
+                <option value="TRANSIENT_VARIABLE">Eruptive Transient / Variable Star</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Observer / Citizen Astronomer Name</label>
+            <input type="text" id="modal-name" placeholder="Your Name or Call-Sign" value="Citizen Astronomer" />
+          </div>
+
+          <div class="form-group">
+            <label>Observational Notes & Evidence</label>
+            <textarea id="modal-notes" rows="3" placeholder="Describe the positional shift, blinking behavior, or spectral dips observed..."></textarea>
+          </div>
+
+          <div class="eval-result-box" id="modal-eval-box">
+            <!-- Automated Evaluation Appears Here -->
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" id="btn-auto-evaluate">
+              <i class="fa-solid fa-microchip"></i> Auto-Evaluate Against Gaia
+            </button>
+            <button type="submit" class="btn-action primary">
+              <i class="fa-solid fa-paper-plane"></i> Submit Discovery Ticket
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aladin Lite Script -->
+  <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" charset="utf-8"></script>
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>

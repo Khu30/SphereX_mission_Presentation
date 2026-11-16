@@ -1,0 +1,24 @@
+{
+  "target": {
+    "ra": 134.5,
+    "dec": -7.2
+  },
+  "observations": [
+    {
+      "observation_id": "OBS001",
+      "date": "2025-07-15",
+      "detector": 1,
+      "release": "DR1",
+      "band": "BAND_01",
+      "access_url": "https://irsa.ipac.caltech.edu/data/SPHEREx/dr1/obs001.fits"
+    },
+    {
+      "observation_id": "OBS002",
+      "date": "2026-01-15",
+      "detector": 1,
+      "release": "DR1",
+      "band": "BAND_01",
+      "access_url": "https://irsa.ipac.caltech.edu/data/SPHEREx/dr1/obs002.fits"
+    }
+  ]
+}

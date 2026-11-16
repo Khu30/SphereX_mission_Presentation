@@ -1,0 +1,23 @@
+releases:
+
+  DR1:
+    collections:
+      - spherex_dr1
+      - spherex_dr1_deep
+      - spherex_dr1_cube
+
+    enabled: true
+
+  QR3:
+    collections:
+      - spherex_qr3
+      - spherex_qr3_deep
+
+    enabled: true
+
+  QR4:
+    collections:
+      - spherex_qr4
+      - spherex_qr4_deep
+
+    enabled: false
